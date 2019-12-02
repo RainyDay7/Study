@@ -1,0 +1,196 @@
+#include<windows.h>
+#include <conio.h>
+#include<math.h>
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);//窗口函数说明
+#define pi 3.1415926
+int num = 0, maxnum = 20;//maxnum是循环一次的次数，num是当前
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPSTR lpszCmdLine, int nCmdShow)
+{
+	WNDCLASSEX wcex;
+	//四个参数分别：对应程序进程的使用句柄，前一个实例的句柄，命令参数，程序在初始化时如何显示窗口
+	HWND hwnd; //指向待会创建的窗口的句柄
+	MSG msg;  //消息变量，存储操作系统捕获的与该窗口相关的所有信息
+	 //一个待初始化的结构体变量，=》用来定义窗口的一些属性
+	TCHAR lpszClassName[] = "My_Drawing"; //窗口类名
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style = 0;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	wcex.lpszMenuName = NULL;
+	wcex.lpszClassName = lpszClassName;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+	//以下进行窗口类的注册
+	if (!RegisterClassEx(&wcex))
+	{//如果注册失败则发出警告
+		MessageBox(NULL, "窗口注册失败", "窗口注册", NULL);//第三个参数时框名
+		return 1;
+	}
+
+	//创建窗口
+	hwnd = CreateWindow(
+		lpszClassName,//窗口类名
+		"曹正英", //窗口实例名
+		WS_OVERLAPPEDWINDOW,//窗口风格
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,//窗口的左上角坐标高和宽都为默认值
+		NULL, NULL,//无父窗口，无主菜单
+		hInstance,
+		NULL
+	);
+	if (!hwnd)
+	{
+		MessageBox(NULL, "窗口创建失败", (LPCTSTR)"创建窗口", NULL);
+		return 1;
+	}
+	//显示刷新之后窗口再变成活得
+	ShowWindow(hwnd, nCmdShow);//显示窗口
+	UpdateWindow(hwnd);//刷新窗口
+
+	while (GetMessage(&msg, NULL, 0, 0)) {//消息循环
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return msg.wParam;//程序终止时将消息返回系统
+}
+
+//窗口函数的代码
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	HDC hdc; //设备描述符，存储了当前窗口的坐标、画笔、画刷等系列绘图相关的输出设备属性
+	HPEN hp; //画笔句柄
+	HBRUSH hb;//画刷句柄
+	PAINTSTRUCT ps;
+	int w = 100, h = 100;
+	int i;
+	int PenStyle[4] = { PS_DOT ,PS_DASHDOT ,PS_DASHDOTDOT ,PS_DASH };
+	int BrushStyle[6] = { BLACK_BRUSH, DKGRAY_BRUSH, GRAY_BRUSH,LTGRAY_BRUSH,NULL_BRUSH,WHITE_BRUSH };
+	int HatchStyle[6] = { HS_BDIAGONAL, HS_DIAGCROSS, HS_FDIAGONAL, HS_CROSS, HS_HORIZONTAL, HS_VERTICAL };
+	int centerx, centery;//定义三个叶片的圆心的坐标
+	double angle;//
+	switch (msg) 
+	{
+	case WM_PAINT:
+		
+		hdc = BeginPaint(hwnd, &ps);//获得设备环境句柄
+		SetMapMode(hdc, MM_TEXT);//设置映射模式=》1：1
+		//Rectangle(hdc, 130, 60, 270, 200);
+		
+		for (int i = 0; i < 4; i++) {
+			hp = CreatePen(PenStyle[i], 1, RGB(0, 0, 0));
+			SelectObject(hdc, hp);
+			Arc(hdc,
+				w, h,
+				w+90, h+90,
+				w, h,
+				w, h);
+			w += 100;
+		}
+		w = 150;
+		h = 220;
+		
+		hp = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+		SelectObject(hdc, hp);
+		for (int i = 0; i < 6; i++) {
+			hb = (HBRUSH)GetStockObject(BrushStyle[i]);
+			SelectObject(hdc, hb);
+			
+			Rectangle(hdc, w, h, w + 50, h + 50);
+			if (i == 2||i==5) {
+				w = 150;
+				h += 50;
+			}
+			else {
+				w += 50;
+			}
+		}
+
+		for (i = 0; i < 6; i++) {
+			hb = CreateHatchBrush(HatchStyle[i], BLACK_PEN);
+			SelectObject(hdc, hb);
+			RoundRect(hdc,
+				w, h,
+				w + 50, h + 50,
+				15, 15);
+			if (i == 2) {
+				w = 150;
+				h += 50;
+			}
+			else { w += 50; }
+		}
+
+		
+		w = 350, h = 250;
+
+		hb = CreateSolidBrush(RGB(255, 0, 0));//红色
+		hp = (HPEN)GetStockObject(BLACK_PEN);
+		SelectObject(hdc, hp);
+		SelectObject(hdc, hb);
+		Pie(hdc, w, h, w + 150, h + 150,
+			(int)(w + 75 + 75* cos(2 * pi / 3)), (int)(h + 75 + 75 * sin(2 * pi / 3)),
+			(int)(w + 75 +75 * cos(0.0)), (int)(h + 75 + 75 * sin(0.0)));
+		hb = CreateSolidBrush(RGB(0, 255, 255));//蓝色
+		SelectObject(hdc, hb);
+		Pie(hdc, w, h, w + 150, h + 150,
+			(int)(w + 75 + 75* cos(4 * pi / 3)), (int)(h + 75 + 75 * sin(4 * pi / 3)),
+			(int)(w + 75 + 75* cos(2 * pi / 3)), (int)(h + 75 + 75 * sin(2 * pi / 3)));
+		hb = CreateSolidBrush(RGB(255, 255, 0));//黄色
+		SelectObject(hdc, hb);
+		Pie(hdc, w, h, w + 150, h + 150,
+			(int)(w + 75 + 75* cos(2 * pi)), (int)(h + 75 + 75 * sin(2 * pi)),
+			(int)(w + 75 + 75* cos(4 * pi / 3)), (int)(h + 75 + 75 * sin(4 * pi / 3)));
+
+		hb = (HBRUSH)GetStockObject(WHITE_BRUSH);
+		SelectObject(hdc, hb);
+		SetMapMode(hdc, MM_ANISOTROPIC);//设置映射模式
+		SetWindowExtEx(hdc, 400, 300, NULL);//设置窗口区域（逻辑）
+		SetViewportExtEx(hdc, 600, 450, NULL);//设置视口区域（物理）
+		SetViewportOrgEx(hdc, 700, 250, NULL);//设置视口原点坐标
+		hp = (HPEN)GetStockObject(BLACK_PEN);
+		Ellipse(hdc, -100, -100, 100, 100);//圆心为00，半径为100
+		hb = CreateSolidBrush(RGB(255, 0, 0));//红色
+		SelectObject(hdc, hb);
+		angle = 2 * pi / maxnum * num;//初始0
+		centerx = (int)(50 * cos(angle));//50
+		centery = (int)(50 * sin(angle));//0
+		Pie(hdc, centerx - 50, centery - 50, centerx + 50, centery + 50,//左上角 0，-50 == 圆心 50.0 ，r=50
+			(int)(centerx + 50 * cos(angle)), (int)(centery + 50 * sin(angle)),
+			(int)(centerx + 50 * cos(angle + pi)), (int)(centery + 50 * sin(angle + pi)));
+
+		hb = CreateSolidBrush(RGB(0, 255, 255));//天蓝色
+		SelectObject(hdc, hb);
+		centerx = (int)(50 * cos(angle + 2 * pi / 3));
+		centery = (int)(50 * sin(angle + 2 * pi / 3));
+		Pie(hdc, centerx - 50, centery - 50, centerx + 50, centery + 50,//左上角 0，-50 == 圆心 50.0 ，r=50
+			(int)(centerx + 50 * cos(angle + 2 * pi / 3)), (int)(centery + 50 * sin(angle + 2 * pi / 3)),
+			(int)(centerx + 50 * cos(angle + pi + 2 * pi / 3)), (int)(centery + 50 * sin(angle + pi + 2 * pi / 3)));
+
+		hb = CreateSolidBrush(RGB(255, 255, 0));//天蓝色
+		SelectObject(hdc, hb);
+		centerx = (int)(50 * cos(angle + 4 * pi / 3));
+		centery = (int)(50 * sin(angle + 4 * pi / 3));
+		Pie(hdc, centerx - 50, centery - 50, centerx + 50, centery + 50,//左上角 0，-50 == 圆心 50.0 ，r=50
+			(int)(centerx + 50 * cos(angle + 4 * pi / 3)), (int)(centery + 50 * sin(angle + 4 * pi / 3)),
+			(int)(centerx + 50 * cos(angle + pi + 4 * pi / 3)), (int)(centery + 50 * sin(angle + pi + 4 * pi / 3)));
+
+		num++;//当前的序数+1
+		Sleep(100);//等待0.1秒
+		InvalidateRect(hwnd, NULL,1);
+
+		EndPaint(hwnd, &ps);//释放环境句柄
+		DeleteObject(hp);
+		DeleteObject(hb);
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);//发出退出消息
+		break;
+	default:
+		return DefWindowProc(hwnd, msg, wParam, lParam);//默认时采用系统消息默认处理函数
+		break;
+	}
+	return 0;
+}

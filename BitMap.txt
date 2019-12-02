@@ -1,0 +1,131 @@
+
+#include<windows.h>
+#include <conio.h>
+#include<math.h>
+long WINAPI WndProc(HWND hwnd, UINT msg, UINT wParam, LONG lParam);//窗口函数说明
+BITMAP bm;//定义位图结构变量
+HBITMAP hbm;//定义位图句柄
+HDC hdc;//定义设备环境句柄
+HDC hdcmem;//定义内存句柄
+char cUPWarn[] = "不能再向上移动了";
+char cDownWarn[] = "不能再向下移动了";
+int iy = 80;
+int iWindowHeight, iWindowWidth;
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPSTR lpszCmdLine, int nCmdShow)
+{
+	WNDCLASSEX wcex;
+
+	//四个参数分别：对应程序进程的使用句柄，前一个实例的句柄，命令参数，程序在初始化时如何显示窗口
+	HWND hwnd; //指向待会创建的窗口的句柄
+	MSG msg;  //消息变量，存储操作系统捕获的与该窗口相关的所有信息
+	 //一个待初始化的结构体变量，=》用来定义窗口的一些属性
+	
+	hbm = LoadBitmap(hInstance, "pic6");//加载位图
+	GetObject(hbm, sizeof(BITMAP), (LPVOID)&bm);//获取位图信息
+	iWindowWidth = 2 * bm.bmWidth;
+	iWindowHeight = 2 * bm.bmHeight;
+	TCHAR lpszClassName[] = "My_Drawing"; //窗口类名
+	
+	
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style = 0;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	wcex.lpszMenuName = "MYMENUNAME";
+	wcex.lpszClassName = lpszClassName;
+
+	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+	//以下进行窗口类的注册
+	if (!RegisterClassEx(&wcex))
+	{//如果注册失败则发出警告
+		MessageBox(NULL, "窗口注册失败", "窗口注册", NULL);//第三个参数时框名
+		return 1;
+	}
+
+	//创建窗口
+	hwnd = CreateWindow(
+		lpszClassName,//窗口类名
+		"曹正英", //窗口实例名
+		WS_OVERLAPPEDWINDOW,//窗口风格
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,//窗口的左上角坐标高和宽都为默认值
+		NULL, NULL,//无父窗口，无主菜单
+		hInstance,
+		NULL
+	);
+	if (!hwnd)
+	{
+		MessageBox(NULL, "窗口创建失败", (LPCTSTR)"创建窗口", NULL);
+		return 1;
+	}
+	//显示刷新之后窗口再变成活得
+	ShowWindow(hwnd, nCmdShow);//显示窗口
+	UpdateWindow(hwnd);//刷新窗口
+	HACCEL ha = LoadAccelerators(hInstance, "MYMENUACCEL");
+
+	while (GetMessage(&msg, NULL, 0, 0)) {//消息循环
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+	}
+	return msg.wParam;//程序终止时将消息返回系统
+}
+
+//窗口函数的代码
+long WINAPI WndProc(HWND hwnd, UINT msg, UINT wParam, LONG lParam) {
+
+	PAINTSTRUCT ps;
+	
+	switch (msg)
+	{
+	case WM_LBUTTONDOWN:
+		iy = iy - 10;
+		InvalidateRect(hwnd, NULL, 1);
+		break;
+	case WM_RBUTTONDOWN:
+		iy = iy + 10;
+		InvalidateRect(hwnd, NULL, 1);
+		break;
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_UP:
+			iy -= 10;
+			break;
+		case VK_DOWN:
+			iy = iy + 10;
+			break;
+		}
+		InvalidateRect(hwnd, NULL, 1);
+		break;
+	case WM_CREATE://初始化窗口消息
+		hdc = GetDC(hwnd);
+		hdcmem = CreateCompatibleDC(hdc);//得到内存指针
+		ReleaseDC(hwnd, hdc);//释放设备环境指针
+	case WM_PAINT:
+		hdc = BeginPaint(hwnd,&ps);
+		if (iy > 0 && iy < iWindowHeight / 2)//当位图完整的在窗口中时
+		{
+			SelectObject(hdcmem, hbm);
+			BitBlt(hdc, 60, iy, bm.bmWidth, bm.bmHeight, hdcmem, 0, 0, SRCCOPY);//输出
+		}
+		else if (iy < 0)
+			TextOut(hdc, 0, 0, cUPWarn, strlen(cUPWarn));
+		else
+			TextOut(hdc, 0, 0, cDownWarn, strlen(cDownWarn));
+		EndPaint(hwnd, &ps);
+		break;
+	case WM_DESTROY:
+		DeleteObject(hbm);
+		PostQuitMessage(0);//发出退出消息
+		break;
+	default:
+		return DefWindowProc(hwnd, msg, wParam, lParam);//默认时采用系统消息默认处理函数
+		break;
+	}
+	return 0;
+}

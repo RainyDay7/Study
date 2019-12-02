@@ -1,0 +1,124 @@
+#include<windows.h>
+#include <conio.h>
+#include<math.h>
+#include<stdio.h>
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);//窗口函数说明
+int iFontSize = 0;
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst, LPSTR lpszCmdLine, int nCmdShow)
+{
+	WNDCLASSEX wcex;
+	//四个参数分别：对应程序进程的使用句柄，前一个实例的句柄，命令参数，程序在初始化时如何显示窗口
+	HWND hwnd; //指向待会创建的窗口的句柄
+	MSG msg;  //消息变量，存储操作系统捕获的与该窗口相关的所有信息
+	 //一个待初始化的结构体变量，=》用来定义窗口的一些属性
+	TCHAR lpszClassName[] = "My_Drawing"; //窗口类名
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style = 0;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	wcex.lpszMenuName = NULL;
+	wcex.lpszClassName = lpszClassName;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+	//以下进行窗口类的注册
+	if (!RegisterClassEx(&wcex))
+	{//如果注册失败则发出警告
+		MessageBox(NULL, "窗口注册失败", "窗口注册", NULL);//第三个参数时框名
+		return 1;
+	}
+
+	//创建窗口
+	hwnd = CreateWindow(
+		lpszClassName,//窗口类名
+		"曹正英", //窗口实例名
+		WS_OVERLAPPEDWINDOW,//窗口风格
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,//窗口的左上角坐标高和宽都为默认值
+		NULL, NULL,//无父窗口，无主菜单
+		hInstance,
+		NULL
+	);
+	if (!hwnd)
+	{
+		MessageBox(NULL, "窗口创建失败", (LPCTSTR)"创建窗口", NULL);
+		return 1;
+	}
+	//显示刷新之后窗口再变成活得
+	ShowWindow(hwnd, nCmdShow);//显示窗口
+	UpdateWindow(hwnd);//刷新窗口
+
+	while (GetMessage(&msg, NULL, 0, 0)) {//消息循环
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return msg.wParam;//程序终止时将消息返回系统
+}
+
+
+
+//窗口函数的代码
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	HDC hdc; //设备描述符，存储了当前窗口的坐标、画笔、画刷等系列绘图相关的输出设备属性
+	HPEN hp; //画笔句柄
+	HBRUSH hb;//画刷句柄
+	char lpsz[] = "好好学习天天向上  ";
+	char chFont[8];
+	int x =0, y = 0, i;
+
+	PAINTSTRUCT ps;
+	HFONT hf;
+	TEXTMETRIC tm;
+	int len = strlen(lpsz);
+	switch (msg)
+	{
+	case WM_PAINT:
+		hdc = BeginPaint(hwnd, &ps);//获得设备环境句柄
+		
+
+		if (iFontSize % 5 == 0) strcpy_s(chFont, "楷体");//设置包含字体信息的字符串
+		else if (iFontSize % 5 == 1) strcpy_s(chFont, "黑体");
+		else if (iFontSize % 5 == 2) strcpy_s(chFont, "隶书");
+		else if (iFontSize % 5 == 3) strcpy_s(chFont, "宋体");
+		else strcpy_s(chFont, "幼圆");
+
+		for (i = 0; i < len; i += 2) {
+			SetTextColor(hdc, RGB((long)(255.0 / len * i), 0, 0));
+			
+			hf = CreateFont(//定义字体句柄
+				(long)(8 + 32.0*i/len), 0,//字体高度、宽度=0是由系统根据高宽比选取宽度指
+				0, 0,//文本倾斜度为0，表示水平；字体倾斜度为0
+				500, 0,//字体粗度为400， 非斜体字
+				0, 0,//无下划线，无删除线
+				GB2312_CHARSET,//所用的字符集
+				OUT_DEFAULT_PRECIS,//删除精度为缺省值
+				CLIP_DEFAULT_PRECIS,//裁剪精度为缺省值
+				DEFAULT_QUALITY,//输出质量为缺省值
+				DEFAULT_PITCH | FF_DONTCARE, //字体距和字体系列为缺省值
+				chFont//字体名称
+			);			
+			SelectObject(hdc, hf);//选入字体
+			GetTextMetrics(hdc, &tm);//获取当前hdc的文本属性，得到包含字体信息的结构体
+			x = x + tm.tmAveCharWidth*3;//输出字符的x坐标。tmAveCharWidth平均字符宽度
+			y = iFontSize % 5 * 40 + tm.tmExternalLeading;//y坐标
+			TextOut(hdc, x, y, &lpsz[i], 2);//输出第i个字符，产生滚动的效果
+			Sleep(100);//暂停0.1秒
+			DeleteObject(hf);//删除字体句柄
+		}
+		iFontSize++;//字体标志增加
+		InvalidateRect(hwnd, NULL, 1);//刷新用户区
+		EndPaint(hwnd, &ps);		
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);//发出退出消息
+		break;
+	default:
+		return DefWindowProc(hwnd, msg, wParam, lParam);//默认时采用系统消息默认处理函数
+		break;
+	}
+	return 0;
+}
